@@ -6,11 +6,14 @@ pub mod frame;
 
 pub struct GraphicalInstaller<Data> {
     data: Option<Data>,
-    frames: Vec<frame::GraphicalInstallerFrame>,
+    frames: Vec<frame::GraphicalInstallerFrame<Data>>,
 }
 
 impl<Data> GraphicalInstaller<Data> {
-    pub fn add_frame(&mut self, frame: frame::GraphicalInstallerFrame) -> Result<(), error::Error> {
+    pub fn add_frame(
+        &mut self,
+        frame: frame::GraphicalInstallerFrame<Data>,
+    ) -> Result<(), error::Error> {
         self.frames.push(frame);
         Ok(())
     }
@@ -27,31 +30,15 @@ impl<Data> GraphicalInstaller<Data> {
         self.data.as_mut()
     }
 
-    // pub fn register_data<T: ?Sized + std::any::Any + 'static>(
-    //     &mut self,
-    //     id: impl Into<String>,
-    //     data: &'static T,
-    // ) -> Result<(), error::Error> {
-    //     let id = id.into();
-    //     if self.data.get(&id).is_some() {
-    //         error!("Spot is taken, return an error or replace data")
-    //     }
-    //     let typeid = std::any::TypeId::of::<T>();
+    pub fn run(&mut self) -> Result<(), error::Error> {
+        // This function in meant to be ran in the main thread (eframes needs it)
 
-    //     self.data.insert(id, (typeid, Box::new(data)));
+        for frame in &mut self.frames {
+            frame.run(self.data.as_mut()).unwrap();
+        }
 
-    //     Ok(())
-    // }
-
-    // pub fn retreive_data<T>(&self, id: impl Into<String>) -> Option<&T> {
-    //     let opt = self.data.get(&(id.into()));
-
-    //     if let Some((typeid, value)) = opt {
-    //         let v = value.try_into::<T>;
-    //     }
-
-    //     None
-    // }
+        Ok(())
+    }
 }
 
 impl<T> Default for GraphicalInstaller<T> {
