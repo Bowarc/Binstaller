@@ -75,6 +75,13 @@ fn frame3_function(
 }
 
 // This is full of hard coded shit, but 1 im fcking tired, 2 it's more like a proof of concept, to see if i like it or not
+
+// working
+// so, next step is maybe to make modules (on lib) for the user to add to their data struct to be used later
+// like this download module could regroup:
+//      a list of pair (url, file name) to dl
+//      some settings
+//      2 or 3 functions for ui and fetching from / starting downloaders  (separating ui and functionalities so the user can make their own ui)
 fn download<Data: Default + std::fmt::Debug>(
     ui: &mut binstaller::eframe::egui::Ui,
     data: &mut MyOptions,
