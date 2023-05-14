@@ -30,16 +30,21 @@ fn main() {
     installer.run().unwrap();
 }
 
-fn frame1_function(data: &mut MyOptions) {
-    println!("Salut, i have some data: {data:?}");
+fn frame1_function(ui: &mut binstaller::eframe::egui::Ui, data: &mut MyOptions) {
+    ui.label(format!("Hey, i have some data: {data:?}"));
+    // println!("Salut, i have some data: {data:?}");
 }
 
-fn frame2_function(data: &mut MyOptions) {
-    println!("Modifying data ...");
+fn frame2_function(ui: &mut binstaller::eframe::egui::Ui, data: &mut MyOptions) {
+    // println!("Modifying data ...");
+    ui.label("Target path:");
+    ui.text_edit_singleline(&mut data.target_path);
 
-    data.target_path = String::from("Modified data")
+    // data.target_path = String::from("Modified data")
 }
 
-fn frame3_function(data: &mut MyOptions) {
-    println!("Salut, i have some Modified data: {data:?}");
+fn frame3_function(ui: &mut binstaller::eframe::egui::Ui, data: &mut MyOptions) {
+    // println!("Salut, i have some Modified data: {data:?}");
+
+    ui.label(format!("The options have been modified with: {data:#?}"));
 }
