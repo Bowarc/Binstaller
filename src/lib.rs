@@ -4,24 +4,27 @@ extern crate log;
 pub mod error;
 pub mod frame;
 
-#[derive(Default)]
-pub struct GraphicalInstaller {
-    data: Option<Box<dyn std::any::Any>>,
+pub struct GraphicalInstaller<Data> {
+    data: Option<Data>,
     frames: Vec<frame::GraphicalInstallerFrame>,
 }
 
-impl GraphicalInstaller {
+impl<Data> GraphicalInstaller<Data> {
     pub fn add_frame(&mut self, frame: frame::GraphicalInstallerFrame) -> Result<(), error::Error> {
         self.frames.push(frame);
         Ok(())
     }
 
-    pub fn register_data(&mut self, data: impl std::any::Any) {
-        self.data = Some(Box::new(data));
+    pub fn register_data(&mut self, data: impl Into<Data>) {
+        self.data = Some(data.into());
     }
 
-    pub fn retreive_data<T: 'static>(&mut self) -> Option<T> {
-        Some(*self.data.take()?.downcast::<T>().unwrap())
+    pub fn retreive_data(&mut self) -> Option<&mut Data> {
+        // match &mut self.data {
+        //     None => None,
+        //     Some(data) => Some(data),
+        // }
+        self.data.as_mut()
     }
 
     // pub fn register_data<T: ?Sized + std::any::Any + 'static>(
@@ -49,4 +52,13 @@ impl GraphicalInstaller {
 
     //     None
     // }
+}
+
+impl<T> Default for GraphicalInstaller<T> {
+    fn default() -> Self {
+        Self {
+            data: None,
+            frames: Vec::new(),
+        }
+    }
 }
