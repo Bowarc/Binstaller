@@ -7,11 +7,17 @@ edition = "2021"
 
 [lib]
 path = "src/lib.rs"
+name = "binstaller"
 crate-type = ["rlib"]
 
+
+[[bin]]
+path = "src/main.rs"
+name = "tests"
 
 
 [dependencies]
 eframe = "0.21.3"
+hashbrown = "0.13.2"
 log = "0.4.17"
 thiserror = "1.0.40"
