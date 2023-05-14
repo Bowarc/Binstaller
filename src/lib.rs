@@ -5,14 +5,19 @@ use eframe::egui;
 
 pub use eframe;
 
+pub mod downloader;
 pub mod error;
 pub mod frame;
+
+pub mod executor;
 
 #[derive(Default)]
 pub struct GraphicalInstaller<Data: Default + std::fmt::Debug> {
     data: Data,
     frames: Vec<frame::GraphicalInstallerFrame<Data>>,
     frame_index: usize,
+
+    downloader_pool: downloader::DownloaderPool,
 }
 
 impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
@@ -36,7 +41,7 @@ impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
         &mut self.data
     }
 
-    pub fn run(self) -> Result<(), error::Error> {
+    pub fn run(mut self) -> Result<(), error::Error> {
         trace!(
             "Running with {num_frames} frames and with data: {data:?}",
             num_frames = self.frames.len(),
@@ -47,6 +52,10 @@ impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
         // for frame in &mut self.frames {
         //     frame.run(&mut self.data).unwrap();
         // }
+
+        // self.frames.push(frame::GraphicalInstallerFrame {
+        //     ui_executor: Box::new(|ui, data| {}),
+        // });
 
         let options = eframe::NativeOptions {
             initial_window_size: Some(eframe::egui::vec2(500.0, 350.0)), /*x800y450 is 16:9*/
@@ -187,11 +196,20 @@ impl<Data: std::default::Default + std::fmt::Debug> GraphicalInstaller<Data> {
         });
     }
 
-    fn downlader_ui(&mut self, ui: &mut eframe::egui::Ui) {}
+    fn downlader_ui(&mut self, ui: &mut eframe::egui::Ui) {
+        // Get the list of urls to download, start each downloader if they are not already running,
+        // Display their progression
+
+        // Display a button to quit when all downloaders are done
+
+        ui.label("Download ui");
+    }
 }
 
 impl<Data: std::default::Default + std::fmt::Debug> eframe::App for GraphicalInstaller<Data> {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+
         egui::CentralPanel::default()
             .frame(
                 eframe::egui::Frame::none()
@@ -221,11 +239,12 @@ impl<Data: std::default::Default + std::fmt::Debug> eframe::App for GraphicalIns
                 .shrink(4.0);
                 let mut content_ui = ui.child_ui(content_rect, *ui.layout());
 
-                self.frames
-                    .get_mut(self.frame_index)
-                    .unwrap()
-                    .run(ui, &mut self.data)
-                    .unwrap();
+                // .unwrap()
+                // .run(ui, &mut self.data)
+                // .unwrap();
+                if let Some(actual_frame) = self.frames.get_mut(self.frame_index) {
+                    (actual_frame.ui_executor)(ui, &mut self.data, &mut self.downloader_pool)
+                }
             });
         egui::TopBottomPanel::bottom("Bottom panel")
             .frame(
@@ -238,12 +257,12 @@ impl<Data: std::default::Default + std::fmt::Debug> eframe::App for GraphicalIns
             )
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button("Previous").clicked() && self.frame_index != 0 {
+                    if self.frame_index != 0 && ui.button("Previous").clicked() {
                         self.frame_index -= 1
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        if ui.button("Next").clicked() && self.frame_index < self.frames.len() - 1 {
+                        if self.frame_index < self.frames.len() - 1 && ui.button("Next").clicked() {
                             self.frame_index += 1
                         }
                     });
