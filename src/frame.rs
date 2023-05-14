@@ -1,21 +1,23 @@
+type Executor<Data> = dyn Fn(&mut Data);
+
 pub struct GraphicalInstallerFrame<Data> {
-    pub(crate) ui_executor: Box<dyn Fn(Option<&mut Data>)>,
+    pub(crate) ui_executor: Box<Executor<Data>>,
 }
 
 impl<Data> GraphicalInstallerFrame<Data> {
     pub fn set_executor(
         &mut self,
-        executor: &'static dyn Fn(Option<&mut Data>),
+        executor: &'static Executor<Data>,
     ) -> Result<(), crate::error::Error> {
         self.ui_executor = Box::new(executor);
         Ok(())
     }
 
-    pub fn run(&mut self, data: Option<&mut Data>) -> Result<(), crate::error::Error> {
+    pub fn run(&mut self, data: &mut Data) -> Result<(), crate::error::Error> {
         // self.ui_executor(data);
 
-        let fnc = &self.ui_executor;
-        fnc(data);
+        (self.ui_executor)(data);
+        // fnc;
         Ok(())
     }
 }

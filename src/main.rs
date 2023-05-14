@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct MyOptions {
     target_path: String,
 }
@@ -22,7 +22,7 @@ fn main() {
         target_path: String::from("D:\\Dev\\Rust\\projects\\binstaller"),
     });
 
-    let my_options = installer.retreive_data().unwrap();
+    let my_options = installer.retreive_data();
 
     println!("Options: {my_options:?}");
     // Prints 'Options: MyOptions { target_path: "D:\\Dev\\Rust\\projects\\binstaller" }'
@@ -30,18 +30,16 @@ fn main() {
     installer.run().unwrap();
 }
 
-fn frame1_function(data: Option<&mut MyOptions>) {
+fn frame1_function(data: &mut MyOptions) {
     println!("Salut, i have some data: {data:?}");
 }
 
-fn frame2_function(data_opt: Option<&mut MyOptions>) {
+fn frame2_function(data: &mut MyOptions) {
     println!("Modifying data ...");
 
-    if let Some(data) = data_opt {
-        data.target_path = String::from("Modified data")
-    }
+    data.target_path = String::from("Modified data")
 }
 
-fn frame3_function(data: Option<&mut MyOptions>) {
+fn frame3_function(data: &mut MyOptions) {
     println!("Salut, i have some Modified data: {data:?}");
 }

@@ -4,12 +4,13 @@ extern crate log;
 pub mod error;
 pub mod frame;
 
-pub struct GraphicalInstaller<Data> {
-    data: Option<Data>,
+#[derive(Default)]
+pub struct GraphicalInstaller<Data: Default + std::fmt::Debug> {
+    data: Data,
     frames: Vec<frame::GraphicalInstallerFrame<Data>>,
 }
 
-impl<Data> GraphicalInstaller<Data> {
+impl<Data: Default + std::fmt::Debug> GraphicalInstaller<Data> {
     pub fn add_frame(
         &mut self,
         frame: frame::GraphicalInstallerFrame<Data>,
@@ -19,33 +20,38 @@ impl<Data> GraphicalInstaller<Data> {
     }
 
     pub fn register_data(&mut self, data: impl Into<Data>) {
-        self.data = Some(data.into());
+        self.data = data.into();
     }
 
-    pub fn retreive_data(&mut self) -> Option<&mut Data> {
+    pub fn retreive_data(&mut self) -> &mut Data {
         // match &mut self.data {
         //     None => None,
         //     Some(data) => Some(data),
         // }
-        self.data.as_mut()
+        &mut self.data
     }
 
     pub fn run(&mut self) -> Result<(), error::Error> {
+        trace!(
+            "Running with {num_frames} frames and with data: {data:?}",
+            num_frames = self.frames.len(),
+            data = self.data
+        );
         // This function in meant to be ran in the main thread (eframes needs it)
 
         for frame in &mut self.frames {
-            frame.run(self.data.as_mut()).unwrap();
+            frame.run(&mut self.data).unwrap();
         }
 
         Ok(())
     }
 }
 
-impl<T> Default for GraphicalInstaller<T> {
-    fn default() -> Self {
-        Self {
-            data: None,
-            frames: Vec::new(),
-        }
-    }
-}
+// impl<T> Default for GraphicalInstaller<T> {
+//     fn default() -> Self {
+//         Self {
+//             data: None,
+//             frames: Vec::new(),
+//         }
+//     }
+// }
