@@ -78,18 +78,24 @@ impl Default for MyOptions{
         MyOptions {
             downloader: binstaller::modules::downloader::DownloaderPool{
                 settings: binstaller::modules::downloader::DownloaderSettings{
-                    download_path: std::path::PathBuf::from("D:/dev/rust/projects/binstaller/downloads/"),
+                    download_path: std::path::PathBuf::from("downloads/"),
                     concurent_download_limit: None,
                 },
                 requests: vec![
                     binstaller::modules::downloader::DownloadRequest {
-                        file_name: String::from("lumin_mpv.exe"),
-                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_mpv.exe"),
+                        file_name: String::from("readme.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.exe"),
                         path: None
                     },
+                    
                     binstaller::modules::downloader::DownloadRequest {
                         file_name: String::from("lumin_client.exe"),
                         url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_client.exe"),
+                        path: None
+                    },
+                    binstaller::modules::downloader::DownloadRequest {
+                        file_name: String::from("lumin_mpv.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_mpv.exe"),
                         path: None
                     },
                     binstaller::modules::downloader::DownloadRequest {
@@ -97,11 +103,7 @@ impl Default for MyOptions{
                         url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_daemon.exe"),
                         path: None
                     },
-                    binstaller::modules::downloader::DownloadRequest {
-                        file_name: String::from("readme.exe"),
-                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.exe"),
-                        path: None
-                    },
+
                 ],
                 list: vec![],
             },

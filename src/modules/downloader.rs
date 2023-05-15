@@ -56,7 +56,7 @@ impl DownloaderPool {
 
         let (sender, receiver) = std::sync::mpsc::channel::<UpdateMessage>();
         sender.send(UpdateMessage::Starting).unwrap();
-        let handle = tokio::task::spawn(async  {
+        let _handle = tokio::task::spawn(async  {
             download(target_url, target_directory, file_name, sender).await
         });
         receiver
@@ -103,11 +103,8 @@ impl DownloaderPool {
                 
             }
         }
-
-
-        println!("Frame");
         for download in self.list.iter_mut() {
-            println!("Checking downloader for: {}", download.target_url);
+            // println!("Checking downloader for: {}", download.target_url);
             match download.update_receiver.try_recv() {
                 Ok(msg) => match msg {
                     UpdateMessage::Starting => println!("Stating download"),
@@ -143,7 +140,6 @@ impl DownloaderPool {
 async fn  download(target_url: String, target_directory: std::path::PathBuf, file_name: String, sender: std::sync::mpsc::Sender<UpdateMessage>){
     use futures_util::stream::StreamExt as _;
     use std::io::Write as _;
-    println!("yay");
 
     let reqwest_client = reqwest::ClientBuilder::new()
         .user_agent("Installer")
