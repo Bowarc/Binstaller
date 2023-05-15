@@ -5,22 +5,19 @@ use eframe::egui;
 
 pub use eframe;
 
-pub mod downloader;
 pub mod error;
-pub mod frame;
-
 pub mod executor;
+pub mod frame;
+pub mod modules;
 
 #[derive(Default)]
-pub struct GraphicalInstaller<Data: Default + std::fmt::Debug> {
-    data: Data,
+pub struct GraphicalInstaller<Data: std::fmt::Debug> {
+    data: Option<Data>,
     frames: Vec<frame::GraphicalInstallerFrame<Data>>,
     frame_index: usize,
-
-    downloader_pool: downloader::DownloaderPool,
 }
 
-impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
+impl<Data: std::fmt::Debug + 'static> GraphicalInstaller<Data> {
     pub fn add_frame(
         &mut self,
         frame: frame::GraphicalInstallerFrame<Data>,
@@ -30,7 +27,7 @@ impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
     }
 
     pub fn register_data(&mut self, data: impl Into<Data>) {
-        self.data = data.into();
+        self.data = Some(data.into());
     }
 
     pub fn retreive_data(&mut self) -> &mut Data {
@@ -38,7 +35,7 @@ impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
         //     None => None,
         //     Some(data) => Some(data),
         // }
-        &mut self.data
+        self.data.as_mut().unwrap()
     }
 
     pub fn run(mut self) -> Result<(), error::Error> {
@@ -96,7 +93,7 @@ impl<Data: Default + std::fmt::Debug + 'static> GraphicalInstaller<Data> {
     }
 }
 
-impl<Data: std::default::Default + std::fmt::Debug> GraphicalInstaller<Data> {
+impl<Data: std::fmt::Debug> GraphicalInstaller<Data> {
     // Ui functions
     fn render_title_bar(
         &mut self,
@@ -206,7 +203,7 @@ impl<Data: std::default::Default + std::fmt::Debug> GraphicalInstaller<Data> {
     }
 }
 
-impl<Data: std::default::Default + std::fmt::Debug> eframe::App for GraphicalInstaller<Data> {
+impl<Data: std::fmt::Debug> eframe::App for GraphicalInstaller<Data> {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.request_repaint();
 
@@ -243,7 +240,7 @@ impl<Data: std::default::Default + std::fmt::Debug> eframe::App for GraphicalIns
                 // .run(ui, &mut self.data)
                 // .unwrap();
                 if let Some(actual_frame) = self.frames.get_mut(self.frame_index) {
-                    (actual_frame.ui_executor)(ui, &mut self.data, &mut self.downloader_pool)
+                    (actual_frame.ui_executor)(ui, self.data.as_mut().unwrap())
                 }
             });
         egui::TopBottomPanel::bottom("Bottom panel")

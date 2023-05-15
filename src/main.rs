@@ -1,33 +1,17 @@
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct MyOptions {
-    asset_list: Vec<String>,
-    downloaded_assets: Vec<String>,
-
-    target_path: String,
+    downloader: binstaller::modules::downloader::DownloaderPool,
 }
 
 #[tokio::main]
 async fn main() {
     let mut installer = binstaller::GraphicalInstaller::<MyOptions>::default();
-    installer.register_data(MyOptions {
-        url: vec![
-            String::from(
-                "https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_client.exe",
-            ),
-            String::from(
-                "https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_daemon.exe",
-            ),
-            String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_mpv.exe"),
-            String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.txt"),
-        ],
-        downloaded_assets: vec![],
-        target_path: String::from("D:\\Dev\\Rust\\projects\\binstaller\\test_downloads\\"),
-    });
+    installer.register_data(MyOptions::default());
 
     let mut frame1 = binstaller::frame::GraphicalInstallerFrame::default();
     frame1
-        .set_executor(&|ui, data, _| {
-            ui.label(format!("Hey, i have some data: {data:?}"));
+        .set_executor(&|ui, data| {
+            ui.label(format!("Hey, i have some data: {data:#?}"));
         })
         .unwrap();
     installer.add_frame(frame1).unwrap();
@@ -55,11 +39,10 @@ async fn main() {
 fn frame2_function(
     ui: &mut binstaller::eframe::egui::Ui,
     data: &mut MyOptions,
-    downloader_pool: &mut binstaller::downloader::DownloaderPool,
 ) {
     // println!("Modifying data ...");
     ui.label("Target path:");
-    ui.text_edit_singleline(&mut data.target_path);
+    ui.text_edit_singleline(&mut format!("{}",data.downloader.settings.download_path.display()));
 
     // data.target_path = String::from("Modified data")
 }
@@ -67,7 +50,6 @@ fn frame2_function(
 fn frame3_function(
     ui: &mut binstaller::eframe::egui::Ui,
     data: &mut MyOptions,
-    downloader_pool: &mut binstaller::downloader::DownloaderPool,
 ) {
     // println!("Salut, i have some Modified data: {data:?}");
 
@@ -85,52 +67,45 @@ fn frame3_function(
 fn download<Data: Default + std::fmt::Debug>(
     ui: &mut binstaller::eframe::egui::Ui,
     data: &mut MyOptions,
-    downloader_pool: &mut binstaller::downloader::DownloaderPool,
 ) {
-    // println!("Salut, i have some Modified data: {data:?}");
-
-    let dl_limit = if let Some(limit) = downloader_pool.settings.concurent_download_limit {
-        limit
-    } else {
-        usize::MAX
-    };
-
-    if downloader_pool.active_download_count() < dl_limit {
+    data.downloader.update();
+    data.downloader.ui(ui)
+}
 
 
-        downloader_pool.start_download(
-            std::path::PathBuf::from(data.target_path.clone()),
-            data.asset_list.get(0).unwrap().to_string(),
-            "lumin_client.exe".to_string(),
-        )
-    }
-
-    ui.separator();
-    for download in downloader_pool.list.iter_mut() {
-        ui.label(format!(" Lumin {:.1}%", download.prcentage));
-        ui.separator();
-
-        match download.update_receiver.try_recv() {
-            Ok(msg) => match msg {
-                binstaller::downloader::UpdateMessage::Starting => println!("Stating download"),
-                binstaller::downloader::UpdateMessage::Prcent(value) => {
-                    download.prcentage = value;
-                    println!("Prcentage update: {value}")
-                }
-                binstaller::downloader::UpdateMessage::Done => {
-                    download.done= true;
-                    println!("Download ended")
+impl Default for MyOptions{
+    fn default() -> Self {
+        MyOptions {
+            downloader: binstaller::modules::downloader::DownloaderPool{
+                settings: binstaller::modules::downloader::DownloaderSettings{
+                    download_path: std::path::PathBuf::from("D:/dev/rust/projects/binstaller/downloads/"),
+                    concurent_download_limit: None,
                 },
-                binstaller::downloader::UpdateMessage::Error(e) => {
-                    eprintln!("Got an error while using the downloader: {e}")
-                }
+                requests: vec![
+                    binstaller::modules::downloader::DownloadRequest {
+                        file_name: String::from("lumin_mpv.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_mpv.exe"),
+                        path: None
+                    },
+                    binstaller::modules::downloader::DownloadRequest {
+                        file_name: String::from("lumin_client.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_client.exe"),
+                        path: None
+                    },
+                    binstaller::modules::downloader::DownloadRequest {
+                        file_name: String::from("lumin_daemon.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_daemon.exe"),
+                        path: None
+                    },
+                    binstaller::modules::downloader::DownloadRequest {
+                        file_name: String::from("readme.exe"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.exe"),
+                        path: None
+                    },
+                ],
+                list: vec![],
             },
-            Err(e) =>{
 
-                 // eprintln!("{e}")
-            },
         }
     }
-
-    // ui.label(format!("The options have been modified with: {data:#?}"));
 }
