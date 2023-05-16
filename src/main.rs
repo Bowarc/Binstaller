@@ -3,8 +3,7 @@ struct MyOptions {
     downloader: binstaller::modules::downloader::DownloaderPool,
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let mut installer = binstaller::GraphicalInstaller::<MyOptions>::default();
     installer.register_data(MyOptions::default());
 
@@ -36,21 +35,18 @@ async fn main() {
     installer.run().unwrap();
 }
 
-fn frame2_function(
-    ui: &mut binstaller::eframe::egui::Ui,
-    data: &mut MyOptions,
-) {
+fn frame2_function(ui: &mut binstaller::eframe::egui::Ui, data: &mut MyOptions) {
     // println!("Modifying data ...");
     ui.label("Target path:");
-    ui.text_edit_singleline(&mut format!("{}",data.downloader.settings.download_path.display()));
+    ui.text_edit_singleline(&mut format!(
+        "{}",
+        data.downloader.settings.download_path.display()
+    ));
 
     // data.target_path = String::from("Modified data")
 }
 
-fn frame3_function(
-    ui: &mut binstaller::eframe::egui::Ui,
-    data: &mut MyOptions,
-) {
+fn frame3_function(ui: &mut binstaller::eframe::egui::Ui, data: &mut MyOptions) {
     // println!("Salut, i have some Modified data: {data:?}");
 
     ui.label(format!("The options have been modified with: {data:#?}"));
@@ -72,8 +68,7 @@ fn download<Data: Default + std::fmt::Debug>(
     data.downloader.ui(ui)
 }
 
-
-impl Default for MyOptions{
+impl Default for MyOptions {
     fn default() -> Self {
         MyOptions {
             downloader: binstaller::modules::downloader::DownloaderPool{
@@ -83,25 +78,25 @@ impl Default for MyOptions{
                 },
                 requests: vec![
                     binstaller::modules::downloader::DownloadRequest {
-                        file_name: String::from("readme.exe"),
-                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.exe"),
+                        file_name: String::from("readme.txt"),
+                        url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/README.txt"),
                         path: None
                     },
                     
                     binstaller::modules::downloader::DownloadRequest {
                         file_name: String::from("lumin_client.exe"),
                         url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_client.exe"),
-                        path: None
+                        path: Some(std::path::PathBuf::from("bin/"))
                     },
                     binstaller::modules::downloader::DownloadRequest {
                         file_name: String::from("lumin_mpv.exe"),
                         url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_mpv.exe"),
-                        path: None
+                        path: Some(std::path::PathBuf::from("bin/"))
                     },
                     binstaller::modules::downloader::DownloadRequest {
                         file_name: String::from("lumin_daemon.exe"),
                         url: String::from("https://github.com/Bowarc/Lumin/releases/download/0.1.3/lumin_daemon.exe"),
-                        path: None
+                        path: Some(std::path::PathBuf::from("bin/"))
                     },
 
                 ],

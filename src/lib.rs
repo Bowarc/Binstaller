@@ -192,15 +192,6 @@ impl<Data: std::fmt::Debug> GraphicalInstaller<Data> {
             });
         });
     }
-
-    fn downlader_ui(&mut self, ui: &mut eframe::egui::Ui) {
-        // Get the list of urls to download, start each downloader if they are not already running,
-        // Display their progression
-
-        // Display a button to quit when all downloaders are done
-
-        ui.label("Download ui");
-    }
 }
 
 impl<Data: std::fmt::Debug> eframe::App for GraphicalInstaller<Data> {
@@ -227,18 +218,15 @@ impl<Data: std::fmt::Debug> eframe::App for GraphicalInstaller<Data> {
                 };
                 self.render_title_bar(ui, frame, title_bar_rect, "Installer");
 
-                // rest of the window
-                let content_rect = {
-                    let mut rect = app_rect;
-                    rect.min.y = title_bar_rect.max.y;
-                    rect
-                }
-                .shrink(4.0);
-                let mut content_ui = ui.child_ui(content_rect, *ui.layout());
+                // // rest of the window
+                // let content_rect = {
+                //     let mut rect = app_rect;
+                //     rect.min.y = title_bar_rect.max.y;
+                //     rect
+                // }
+                // .shrink(4.0);
+                // let mut content_ui = ui.child_ui(content_rect, *ui.layout());
 
-                // .unwrap()
-                // .run(ui, &mut self.data)
-                // .unwrap();
                 if let Some(actual_frame) = self.frames.get_mut(self.frame_index) {
                     (actual_frame.ui_executor)(ui, self.data.as_mut().unwrap())
                 }

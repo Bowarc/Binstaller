@@ -14,7 +14,7 @@ pub struct DownloaderPool {
 }
 
 #[derive(Debug)]
-pub struct DownloadRequest{
+pub struct DownloadRequest {
     pub file_name: String,
     pub url: String,
     /// Be carefull, if you set a path for this and for DownloaderSettings::download_path
@@ -23,7 +23,7 @@ pub struct DownloadRequest{
     ///     DownloaderSettings::download_path = D:/MyApp/
     ///     DownloadRequest::path = updater/
     /// The file will be downloaded to the folder D:/MyApp/updater/
-    pub path: Option<std::path::PathBuf>, 
+    pub path: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug)]
@@ -50,47 +50,53 @@ impl DownloaderPool {
         target_directory: std::path::PathBuf,
         target_url: String,
         file_name: String,
-
-    ) -> std::sync::mpsc::Receiver::<UpdateMessage> {
-
-
+    ) -> std::sync::mpsc::Receiver<UpdateMessage> {
         let (sender, receiver) = std::sync::mpsc::channel::<UpdateMessage>();
         sender.send(UpdateMessage::Starting).unwrap();
-        let _handle = tokio::task::spawn(async  {
-            download(target_url, target_directory, file_name, sender).await
+        let _handle = std::thread::spawn(|| {
+            download(target_url, target_directory, file_name, sender);
         });
         receiver
-
     }
 
-
-    pub fn update(&mut self){
+    pub fn update(&mut self) {
         let dl_limit = if let Some(limit) = self.settings.concurent_download_limit {
             limit
         } else {
             usize::MAX
         };
 
-
-        'start_check: for download_request in self.requests.iter(){
-
+        'start_check: for download_request in self.requests.iter() {
             if self.list.len() < dl_limit {
-                let target_directory = if let Some(custom_path) = &download_request.path{
+                let target_directory = if let Some(custom_path) = &download_request.path {
                     self.settings.download_path.join(custom_path)
-                }else{
+                } else {
                     self.settings.download_path.clone()
-                }.clone();
-
-
-                for dl in &self.list{
-                    if dl.target_url == download_request.url{
-                        // already started
-                        continue 'start_check;
-                    }
                 }
+                .clone();
 
+                if self
+                    .list
+                    .iter()
+                    .map(|dl| dl.target_url.clone())
+                    .collect::<Vec<String>>()
+                    .contains(&download_request.url)
+                {
+                    continue 'start_check;
+                }
+                // same as above but better (+ loop label not usefull anymore)
+                // for dl in &self.list{
+                //     if dl.target_url == download_request.url{
+                //         // already started
+                //         continue 'start_check;
+                //     }
+                // }
 
-                let receiver = self.start_download(target_directory.clone(), download_request.url.clone(), download_request.file_name.clone());
+                let receiver = self.start_download(
+                    target_directory.clone(),
+                    download_request.url.clone(),
+                    download_request.file_name.clone(),
+                );
 
                 self.list.push(Downloader {
                     file_name: download_request.file_name.clone(),
@@ -100,7 +106,6 @@ impl DownloaderPool {
                     prcentage: 0.0,
                     done: false,
                 });
-                
             }
         }
         for download in self.list.iter_mut() {
@@ -113,42 +118,87 @@ impl DownloaderPool {
                         println!("Prcentage update: {value}")
                     }
                     UpdateMessage::Done => {
-                        download.done= true;
+                        download.done = true;
                         println!("Download ended")
-                    },
+                    }
                     UpdateMessage::Error(e) => {
                         eprintln!("Got an error while using the downloader: {e}")
                     }
                 },
-                Err(e) =>{
+                Err(e) => {
 
-                     eprintln!("{e}")
-                },
+                    // eprintln!("{e}")
+                }
             }
         }
     }
 
-    pub fn ui(&mut self, ui: &mut eframe::egui::Ui){
+    pub fn ui(&mut self, ui: &mut eframe::egui::Ui) {
         for download in self.list.iter_mut() {
-            ui.label(format!(" {} {:.1}%", download.file_name, download.prcentage));
+            ui.label(format!(
+                " {} {:.1}%",
+                download.file_name, download.prcentage
+            ));
             ui.separator();
         }
     }
 }
 
+fn download(
+    target_url: String,
+    mut target_directory: std::path::PathBuf,
+    file_name: String,
+    sender: std::sync::mpsc::Sender<UpdateMessage>,
+) {
+    let rt = tokio::runtime::Runtime::new().unwrap();
 
-async fn  download(target_url: String, target_directory: std::path::PathBuf, file_name: String, sender: std::sync::mpsc::Sender<UpdateMessage>){
-    use futures_util::stream::StreamExt as _;
-    use std::io::Write as _;
+    // Spawn the root task
+    rt.block_on(async {
+        use futures_util::stream::StreamExt as _;
+        use std::io::Write as _;
 
-    let reqwest_client = reqwest::ClientBuilder::new()
-        .user_agent("Installer")
-        .build()
-        .map_err(|reason| format!("Could not create reqwest client, reason: {reason}"))
-        .unwrap();
+        if !target_directory.exists() {
+            println!("Given dir does not exists.. creating it.. {target_directory:?}");
+            std::fs::create_dir_all(target_directory.clone())
+                .map_err(|reason| {
+                    format!("Could not create directory '{target_directory:?}', reason: {reason}")
+                })
+                .unwrap();
+        }
+        if !target_directory.is_absolute() {
+            let unabsolute_path = target_directory.clone();
+            target_directory = target_directory
+                .canonicalize()
+                .map_err(|reason| {
+                    format!("Could not canonicalize '{target_directory:?}', reason: {reason}")
+                })
+                .unwrap();
+            if target_directory
+                .display()
+                .to_string()
+                .starts_with("\\\\?\\")
+            {
+                target_directory = std::path::PathBuf::from(
+                    target_directory
+                        .display()
+                        .to_string()
+                        .replace("\\\\?\\", ""),
+                )
+            }
 
-    let asset_resp =
-        reqwest_client.get(target_url.clone()).send().await
+            println!("Path is not absolute.. {unabsolute_path:?} -> {target_directory:?}\n");
+        }
+
+        let reqwest_client = reqwest::ClientBuilder::new()
+            .user_agent("Installer")
+            .build()
+            .map_err(|reason| format!("Could not create reqwest client, reason: {reason}"))
+            .unwrap();
+
+        let asset_resp = reqwest_client
+            .get(target_url.clone())
+            .send()
+            .await
             .map_err(|reason| {
                 format!(
                     "Could not fetch url '{url}', reason: {reason}",
@@ -157,48 +207,61 @@ async fn  download(target_url: String, target_directory: std::path::PathBuf, fil
             })
             .unwrap();
 
-    let total_size = asset_resp
-        .content_length()
-        .ok_or(format!(
-            "Could not get content length from '{}'",
-            target_url.clone()
-        ))
-        .unwrap();
-
-    // download chunks
-    let mut file = std::fs::File::create(target_directory.join(file_name.clone()))
-        .map_err(|reason| {
-            format!(
-                "Could not create file '{path:?}', reason: {reason}",
-                path = target_directory.join(file_name.clone())
-            )
-        })
-        .unwrap();
-    let mut downloaded: u64 = 0;
-    let mut stream = asset_resp.bytes_stream();
-
-    sender.send(UpdateMessage::Starting).unwrap();
-
-    while let Some(item) = stream.next().await {
-        let chunk = item
-            .map_err(|reason| {
-                format!(
-                "Could not get the next chunk while downloading '{url}', reason {reason}",
-                url = target_url
-            )
-            })
+        let total_size = asset_resp
+            .content_length()
+            .ok_or(format!(
+                "Could not get content length from '{}'",
+                target_url.clone()
+            ))
             .unwrap();
-        file.write_all(&chunk)
+
+        // download chunks
+        let mut file = std::fs::File::create(target_directory.join(file_name.clone()))
             .map_err(|reason| {
                 format!(
-                    "Could not write downloaded chunk to '{path:?}', reason: {reason}",
+                    "Could not create file '{path:?}', reason: {reason}",
                     path = target_directory.join(file_name.clone())
                 )
             })
             .unwrap();
-        let new = std::cmp::min(downloaded + (chunk.len() as u64), total_size);
-        downloaded = new;
-        sender.send(UpdateMessage::Prcent(100.*(new as f64 / total_size as f64) as f32)).unwrap()
-    }
-    sender.send(UpdateMessage::Done).unwrap();
+        let mut downloaded: u64 = 0;
+        let mut stream = asset_resp.bytes_stream();
+
+        sender.send(UpdateMessage::Starting).unwrap();
+
+        let mut last_send = std::time::Instant::now();
+        let send_delay = std::time::Duration::from_millis(10);
+
+        while let Some(item) = stream.next().await {
+            let chunk = item
+                .map_err(|reason| {
+                    format!(
+                        "Could not get the next chunk while downloading '{url}', reason {reason}",
+                        url = target_url
+                    )
+                })
+                .unwrap();
+            file.write_all(&chunk)
+                .map_err(|reason| {
+                    format!(
+                        "Could not write downloaded chunk to '{path:?}', reason: {reason}",
+                        path = target_directory.join(file_name.clone())
+                    )
+                })
+                .unwrap();
+            let new = std::cmp::min(downloaded + (chunk.len() as u64), total_size);
+            downloaded = new;
+
+            if last_send.elapsed() > send_delay {
+                sender
+                    .send(UpdateMessage::Prcent(
+                        100. * (new as f64 / total_size as f64) as f32,
+                    ))
+                    .unwrap();
+                last_send = std::time::Instant::now();
+            }
+        }
+        sender.send(UpdateMessage::Prcent(100.)).unwrap();
+        sender.send(UpdateMessage::Done).unwrap();
+    });
 }
